@@ -6,29 +6,110 @@
 <title>DDHRP Members</title>
 <style>
   * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
+    background: transparent !important;
+  }
   body {
-    margin: 0; min-height: 100vh; display: grid; place-items: center;
-    background: #0b0e15; color: #f4f6fc;
+    display: inline-grid;
+    place-items: center;
+    color: #ffffff;
     font-family: Arial, Helvetica, sans-serif;
   }
   .tracker {
-    width: min(360px, calc(100% - 32px));
-    padding: 28px 24px; text-align: center;
-    background: #151b29; border: 1px solid #293247; border-radius: 18px;
+    width: min(360px, calc(100vw - 24px));
+    padding: 18px 20px;
+    text-align: center;
+    background: transparent;
   }
-  h1 { margin: 0 0 14px; font-size: 15px; letter-spacing: 2px; }
-  .count { margin-bottom: 18px; color: #9aabf5; font-size: 42px; font-weight: 800; }
-  .bar { height: 9px; overflow: hidden; border-radius: 20px; background: #30394d; }
-  .fill { width: 96.2857%; height: 100%; border-radius: inherit; background: #7289da; }
-  p { margin: 12px 0 0; color: #9aa5b8; font-size: 12px; }
+  h1 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-shadow: 0 1px 5px rgba(0,0,0,.55);
+  }
+  .count {
+    margin-bottom: 13px;
+    color: #9aabf5;
+    font-size: 40px;
+    line-height: 1.1;
+    font-weight: 800;
+    text-shadow: 0 1px 6px rgba(0,0,0,.55);
+    font-variant-numeric: tabular-nums;
+  }
+  .bar {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 20px;
+    background: rgba(125, 137, 160, .35);
+  }
+  .fill {
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+    background: #7289da;
+    transition: width .4s ease;
+  }
+  p {
+    margin: 9px 0 0;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    text-shadow: 0 1px 5px rgba(0,0,0,.65);
+  }
 </style>
 </head>
 <body>
-  <main class="tracker">
+  <main class="tracker" aria-live="polite">
     <h1>DDHRP MEMBERS</h1>
-    <div class="count">674 / 700</div>
-    <div class="bar"><div class="fill"></div></div>
-    <p>Nog 26 leden tot de giveaway!</p>
+    <div class="count" id="count">674 / 700</div>
+    <div class="bar" role="progressbar" aria-label="Voortgang naar 700 leden"
+         aria-valuemin="0" aria-valuemax="700" aria-valuenow="674" id="progress">
+      <div class="fill" id="fill" style="width:96.2857%"></div>
+    </div>
+    <p id="remaining">Nog 26 leden tot de giveaway!</p>
   </main>
+
+<script>
+  const INVITE_CODE = "ddhrpnl";
+  const GOAL = 700;
+
+  async function updateMembers() {
+    try {
+      const response = await fetch(
+        `https://discord.com/api/v10/invites/${INVITE_CODE}?with_counts=true`,
+        { cache: "no-store" }
+      );
+      if (!response.ok) throw new Error("Discord API niet bereikbaar");
+
+      const invite = await response.json();
+      const members = invite.approximate_member_count;
+      if (!Number.isFinite(members)) throw new Error("Geen ledental ontvangen");
+
+      const percent = Math.min(100, (members / GOAL) * 100);
+      document.getElementById("count").textContent =
+        `${members.toLocaleString("nl-NL")} / ${GOAL}`;
+      document.getElementById("fill").style.width = `${percent}%`;
+      document.getElementById("progress").setAttribute(
+        "aria-valuenow", Math.min(members, GOAL)
+      );
+
+      const left = Math.max(0, GOAL - members);
+      document.getElementById("remaining").textContent = left === 0
+        ? "700 leden bereikt — giveaway time!"
+        : `Nog ${left} leden tot de giveaway!`;
+    } catch (error) {
+      // Keep the last displayed value if Discord cannot be reached.
+      console.warn("DDHRP member count kon niet worden bijgewerkt:", error);
+    }
+  }
+
+  updateMembers();
+  setInterval(updateMembers, 60_000);
+</script>
 </body>
 </html>
